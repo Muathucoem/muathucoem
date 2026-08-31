@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Sảnh Cờ — Caro · Cờ Vua · Nối 4</title>
+<style>
+  :root{
+    --wood-dark:#241610;
+    --wood:#3a2418;
+    --felt:#1f3b2c;
+    --felt-light:#2a4d38;
+    --ivory:#f2e9d8;
+    --ivory-dim:#cfc3a8;
+    --gold:#c9a15a;
+    --gold-bright:#e2c27f;
+    --red:#b3432b;
+    --blue:#3a6ea5;
+    --radius:10px;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --mono:"SFMono-Regular",Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    background:
+      radial-gradient(circle at 50% -10%, #3d2a1c 0%, var(--wood-dark) 60%);
+    color:var(--ivory);
+    font-family:var(--serif);
+    overflow-x:hidden;
+  }
+  #app{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px;}
+
+  .brand{
+    text-align:center;margin:8px 0 28px;
+  }
+  .brand h1{
+    font-size:2rem;margin:0;letter-spacing:.5px;color:var(--gold-bright);
+    font-weight:600;
+  }
+  .brand p{margin:6px 0 0;color:var(--ivory-dim);font-size:.95rem;}
+
+  .panel{
+    background:linear-gradient(180deg, var(--felt-light), var(--felt));
+    border:1px solid rgba(201,161,90,.35);
+    border-radius:var(--radius);
+    box-shadow:0 12px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.05);
+    padding:26px;
+    width:100%;max-width:440px;
+  }
+  .panel + .panel{margin-top:18px;}
+
+  h2{margin:0 0 4px;font-size:1.25rem;color:var(--gold-bright);font-weight:600;}
+  .sub{color:var(--ivory-dim);font-size:.85rem;margin:0 0 18px;}
+
+  label{display:block;font-size:.8rem;color:var(--ivory-dim);margin-bottom:6px;}
+  input[type=text]{
+    width:100%;padding:11px 12px;border-radius:8px;border:1px solid rgba(201,161,90,.4);
+    background:rgba(0,0,0,.25);color:var(--ivory);font-family:var(--serif);font-size:1rem;
+    outline:none;
+  }
+  input[type=text]:focus{border-color:var(--gold);}
+  input[type=text]::placeholder{color:rgba(242,233,216,.35)}
+
+  .row{display:flex;gap:10px;margin-top:14px;}
+  .row > *{flex:1;}
+
+  button{
+    font-family:var(--serif);font-size:.95rem;padding:11px 16px;border-radius:8px;
+    border:1px solid rgba(201,161,90,.5);
+    background:linear-gradient(180deg,#d9b06c,var(--gold));
+    color:#241610;font-weight:700;cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  button:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,0,0,.35);}
+  button:active{transform:translateY(0);}
+  button.ghost{
+    background:transparent;color:var(--ivory);border:1px solid rgba(242,233,216,.35);font-weight:500;
+  }
+  button.danger{background:linear-gradient(180deg,#c95a3f,var(--red));color:#fff;}
+  button:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+  .hint{font-size:.78rem;color:var(--ivory-dim);margin-top:10px;}
+  .err{color:#e28a7a;font-size:.82rem;margin-top:10px;min-height:1em;}
+
+  .hidden{display:none !important;}
+
+  /* lobby elo badge */
+  .me-badge{
+    display:flex;align-items:center;justify-content:space-between;
+    background:rgba(0,0,0,.22);border-radius:8px;padding:10px 14px;margin-bottom:16px;
+  }
+  .me-badge .nick{font-weight:700;color:var(--gold-bright);}
+  .me-badge .elo{font-family:var(--mono);color:var(--ivory-dim);font-size:.85rem;}
+
+  table.board-table{width:100%;border-collapse:collapse;font-size:.85rem;}
+  table.board-table th{text-align:left;color:var(--ivory-dim);font-weight:500;padding:6px 4px;border-bottom:1px solid rgba(201,161,90,.25);}
+  table.board-table td{padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.05);}
+  table.board-table tr:first-child td{color:var(--gold-bright);font-weight:700;}
+
+  /* room screen */
+  .room-topbar{
+    width:100%;max-width:900px;display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:16px;flex-wrap:wrap;gap:10px;
+  }
+  .room-id-chip{
+    font-family:var(--mono);letter-spacing:2px;background:rgba(0,0,0,.3);
+    padding:6px 12px;border-radius:6px;border:1px solid rgba(201,161,90,.35);
+  }
+  .players-strip{display:flex;gap:16px;align-items:center;font-size:.9rem;color:var(--ivory-dim);}
+  .players-strip .turn-on{color:var(--gold-bright);font-weight:700;}
+
+  .game-picker{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:6px;}
+  .game-card{
+    width:150px;padding:18px 10px;text-align:center;border-radius:10px;
+    border:1px solid rgba(201,161,90,.35);background:rgba(0,0,0,.2);cursor:pointer;
+  }
+  .game-card:hover{background:rgba(201,161,90,.12);}
+  .game-card .emoji{font-size:2rem;display:block;margin-bottom:8px;}
+  .game-card .name{font-weight:700;color:var(--ivory);}
+
+  .board-wrap{width:100%;max-width:640px;display:flex;flex-direction:column;align-items:center;}
+
+  /* Caro board */
+  #caroBoard{
+    display:grid;
+    gap:2px;
+    background:var(--wood);
+    padding:6px;border-radius:8px;
+    border:1px solid rgba(201,161,90,.35);
+    perspective:900px;
+    touch-action:manipulation;
+  }
+  .caro-cell{
+    width:26px;height:26px;background:#e8dcc0;border-radius:2px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    position:relative;
+  }
+  .caro-cell:hover{background:#f4e9cf;}
+  .stone{
+    width:20px;height:20px;border-radius:50%;
+    transform-style:preserve-3d;
+    animation:drop .28s cubic-bezier(.34,1.56,.64,1);
+  }
+  .stone.x{background:radial-gradient(circle at 35% 30%, #e37a5c, var(--red) 70%);box-shadow:0 3px 4px rgba(0,0,0,.5), inset 0 -3px 4px rgba(0,0,0,.35), inset 0 2px 3px rgba(255,255,255,.4);}
+  .stone.o{background:radial-gradient(circle at 35% 30%, #6f9bc9, var(--blue) 70%);box-shadow:0 3px 4px rgba(0,0,0,.5), inset 0 -3px 4px rgba(0,0,0,.35), inset 0 2px 3px rgba(255,255,255,.4);}
+  @keyframes drop{
+    0%{transform:translateZ(60px) scale(.6);opacity:0;}
+    70%{transform:translateZ(-4px) scale(1.06);opacity:1;}
+    100%{transform:translateZ(0) scale(1);}
+  }
+  .caro-cell.win .stone{outline:2px solid var(--gold-bright);outline-offset:2px;}
+
+  canvas.gl{border-radius:10px;border:1px solid rgba(201,161,90,.35);touch-action:none;}
+
+  /* shared framed box for boards */
+  .board-frame{
+    border:1px solid rgba(201,161,90,.4);
+    border-radius:12px;
+    background:linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,.32));
+    padding:14px;
+    box-shadow:0 12px 30px rgba(0,0,0,.45);
+    display:flex;justify-content:center;
+    width:100%;
+  }
+
+  /* 2D chess board */
+  #chessBoard{
+    display:grid;grid-template-columns:repeat(8,1fr);
+    width:100%;max-width:460px;aspect-ratio:1/1;
+    border-radius:6px;overflow:hidden;border:1px solid rgba(0,0,0,.4);
+  }
+  .chess-cell{
+    display:flex;align-items:center;justify-content:center;
+    font-size:clamp(22px,7.5vw,38px);cursor:pointer;position:relative;user-select:none;
+  }
+  .chess-cell.light{background:#e8dcc0;}
+  .chess-cell.dark{background:#6b4a32;}
+  .chess-cell.selected{box-shadow:inset 0 0 0 3px var(--gold-bright);}
+  .chess-cell.legal::after{content:"";position:absolute;width:24%;height:24%;border-radius:50%;background:rgba(31,59,44,.55);}
+  .chess-cell.legal-capture{box-shadow:inset 0 0 0 3px rgba(179,67,43,.85);}
+  .piece-w{color:#ffffff;text-shadow:0 1px 1px rgba(0,0,0,.55), 0 0 3px rgba(0,0,0,.35);}
+  .piece-b{color:#1a120c;text-shadow:0 1px 1px rgba(255,255,255,.4);}
+
+  .status-line{margin:14px 0;font-size:1rem;color:var(--gold-bright);min-height:1.4em;text-align:center;}
+  .actions-row{display:flex;gap:10px;margin-top:10px;}
+
+  footer{margin-top:40px;color:rgba(242,233,216,.3);font-size:.75rem;text-align:center;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="brand">
+    <h1>Sảnh Cờ</h1>
+    <p>Caro · Cờ Vua 3D · Nối 4 — chơi cùng bạn qua Room ID</p>
+  </div>
+
+  <!-- SCREEN: NICKNAME -->
+  <div id="screen-nick" class="panel">
+    <h2>Đặt biệt danh</h2>
+    <p class="sub">Đây là tên đối thủ sẽ thấy, và tên hiển thị trên bảng xếp hạng ELO.</p>
+    <label for="nickInput">Biệt danh</label>
+    <input type="text" id="nickInput" maxlength="16" placeholder="Vd: HoangDeCo">
+    <div class="row">
+      <button id="btnSaveNick">Tiếp tục</button>
+    </div>
+    <div class="err" id="nickErr"></div>
+  </div>
+
+  <!-- SCREEN: LOBBY -->
+  <div id="screen-lobby" class="panel hidden" style="max-width:480px">
+    <div class="me-badge">
+      <span class="nick" id="lobbyNick"></span>
+      <span class="elo" id="lobbyElo"></span>
+      <button class="ghost" id="btnChangeNick" style="padding:6px 10px;font-size:.78rem;">Đổi tên</button>
+    </div>
+
+    <h2>Tạo phòng mới</h2>
+    <p class="sub">Sinh một mã phòng để gửi cho đối thủ.</p>
+    <button id="btnCreateRoom">Tạo phòng</button>
+
+    <div style="height:1px;background:rgba(201,161,90,.25);margin:22px 0;"></div>
+
+    <h2>Vào phòng có sẵn</h2>
+    <p class="sub">Nhập mã phòng bạn nhận được.</p>
+    <input type="text" id="joinRoomInput" maxlength="6" placeholder="VD: A3F9K2" style="text-transform:uppercase;">
+    <div class="row">
+      <button id="btnJoinRoom">Vào phòng</button>
+    </div>
+    <div class="err" id="lobbyErr"></div>
+  </div>
+
+  <!-- SCREEN: LEADERBOARD (part of lobby, separate panel) -->
+  <div id="screen-leaderboard" class="panel hidden" style="max-width:480px">
+    <h2>Bảng xếp hạng ELO</h2>
+    <p class="sub">Top người chơi</p>
+    <table class="board-table" id="lbTable">
+      <tr><td colspan="4">Đang tải…</td></tr>
+    </table>
+  </div>
+
+  <!-- SCREEN: ROOM / GAME -->
+  <div id="screen-room" class="hidden" style="width:100%;display:flex;flex-direction:column;align-items:center;">
+    <div class="room-topbar">
+      <div>
+        <span class="room-id-chip" id="roomIdChip"></span>
+        <button class="ghost" id="btnLeaveRoom" style="margin-left:8px;padding:6px 10px;font-size:.78rem;">Rời phòng</button>
+      </div>
+      <div class="players-strip" id="playersStrip"></div>
+    </div>
+
+    <!-- game picker (host only, before game chosen) -->
+    <div id="pickerWrap" class="panel hidden" style="max-width:560px;text-align:center;">
+      <h2>Chọn trò chơi</h2>
+      <p class="sub">Người tạo phòng chọn trò cho cả hai</p>
+      <div class="game-picker">
+        <div class="game-card" data-game="caro"><span class="emoji">⚫⚪</span><span class="name">Caro</span></div>
+        <div class="game-card" data-game="chess"><span class="emoji">♞</span><span class="name">Cờ Vua 3D</span></div>
+        <div class="game-card" data-game="connect4"><span class="emoji">🔴🟡</span><span class="name">Nối 4 (3D)</span></div>
+      </div>
+    </div>
+
+    <div id="waitingWrap" class="panel hidden" style="max-width:480px;text-align:center;">
+      <h2>Đang chờ đối thủ…</h2>
+      <p class="sub">Gửi mã phòng ở trên cho bạn bè để họ vào.</p>
+    </div>
+
+    <div class="status-line" id="statusLine"></div>
+
+    <div class="board-wrap" id="boardWrap"></div>
+
+    <div class="actions-row hidden" id="postGameActions">
+      <button id="btnRematch">Chơi lại</button>
+      <button class="ghost" id="btnBackLobby">Về sảnh</button>
+    </div>
+  </div>
+
+  <footer>Cre:Muathucoem</footer>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+import {
+  getDatabase, ref, set, get, update, onValue, remove, runTransaction, onDisconnect, child
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+import * as THREE from "three";
+
+/* ===================== FIREBASE SETUP ===================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyD4VCUhSQzvKM07oRq7uvx3XB8dKDGM_Ew",
+  authDomain: "caro-chess-web.firebaseapp.com",
+  databaseURL: "https://caro-chess-web-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "caro-chess-web",
+  storageBucket: "caro-chess-web.firebasestorage.app",
+  messagingSenderId: "610835153410",
+  appId: "1:610835153410:web:d5302e732833b4bbf31d1b"
+};
+
+let app, db, dbReady = false;
+try{
+  app = initializeApp(firebaseConfig);
+  db = getDatabase(app);
+  dbReady = true;
+}catch(e){
+  console.error("Firebase init failed", e);
+}
+
+function keyify(nick){ return nick.replace(/[.#$\[\]\/\s]/g,"_"); }
+
+/* ===================== STATE ===================== */
+let myNick = localStorage.getItem("gh_nick") || "";
+let myElo = 1200;
+let myRole = null; // 'p1' | 'p2'
+let currentRoomId = null;
+let roomUnsub = null;
+let roomState = null;
+let chessGame = null; // chess.js instance mirror for local validation
+let threeCtx = null; // holds renderer/scene per active 3D game, disposed on leave
+
+/* ===================== DOM ===================== */
+const $ = (id)=>document.getElementById(id);
+const screenNick = $("screen-nick");
+const screenLobby = $("screen-lobby");
+const screenLeaderboard = $("screen-leaderboard");
+const screenRoom = $("screen-room");
+
+/* ===================== NICKNAME ===================== */
+$("btnSaveNick").onclick = async ()=>{
+  const val = $("nickInput").value.trim();
+  if(val.length < 2){ $("nickErr").textContent = "Biệt danh cần ít nhất 2 ký tự."; return; }
+  if(!/^[a-zA-Z0-9À-ỹ _-]{2,16}$/.test(val)){ $("nickErr").textContent = "Chỉ dùng chữ, số, khoảng trắng, - hoặc _."; return; }
+  myNick = val;
+  localStorage.setItem("gh_nick", myNick);
+  await ensureLeaderboardEntry();
+  goLobby();
+};
+$("btnChangeNick").onclick = ()=>{
+  showOnly(screenNick);
+  $("nickInput").value = myNick;
+};
+
+async function ensureLeaderboardEntry(){
+  if(!dbReady) return;
+  const k = keyify(myNick);
+  const snap = await get(ref(db, "leaderboard/"+k));
+  if(!snap.exists()){
+    await set(ref(db, "leaderboard/"+k), { nick: myNick, elo: 1200, wins:0, losses:0, draws:0 });
+    myElo = 1200;
+  } else {
+    myElo = snap.val().elo;
+  }
+}
+
+/* ===================== SCREEN HELPERS ===================== */
+function showOnly(...panels){
+  [screenNick, screenLobby, screenLeaderboard, screenRoom].forEach(p=>p.classList.add("hidden"));
+  panels.forEach(p=>p.classList.remove("hidden"));
+}
+
+async function goLobby(){
+  $("lobbyNick").textContent = myNick;
+  $("lobbyElo").textContent = "ELO " + myElo;
+  showOnly(screenLobby, screenLeaderboard);
+  loadLeaderboard();
+}
+
+function loadLeaderboard(){
+  if(!dbReady) return;
+  onValue(ref(db, "leaderboard"), (snap)=>{
+    const data = snap.val() || {};
+    const arr = Object.values(data).sort((a,b)=>b.elo-a.elo).slice(0,10);
+    const tbl = $("lbTable");
+    if(arr.length===0){ tbl.innerHTML = "<tr><td>Chưa có ai chơi.</td></tr>"; return; }
+    let html = "<tr><th>#</th><th>Tên</th><th>ELO</th><th>T/H/B</th></tr>";
+    arr.forEach((p,i)=>{
+      html += `<tr><td>${i+1}</td><td>${escapeHtml(p.nick)}</td><td>${p.elo}</td><td>${p.wins||0}/${p.losses||0}/${p.draws||0}</td></tr>`;
+    });
+    tbl.innerHTML = html;
+  });
+}
+function escapeHtml(s){ return s.replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+/* ===================== ROOM: CREATE / JOIN ===================== */
+function randomRoomId(){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "";
+  for(let i=0;i<5;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+
+$("btnCreateRoom").onclick = async ()=>{
+  if(!dbReady){ $("lobbyErr").textContent = "Chưa kết nối được máy chủ."; return; }
+  const id = randomRoomId();
+  await set(ref(db, "rooms/"+id), {
+    createdAt: Date.now(),
+    p1: { nick: myNick },
+    p2: null,
+    game: null,
+    status: "waiting",
+    turn: "p1",
+    board: null,
+    fen: null,
+    lastMove: null,
+    winner: null,
+    rematch: { p1:false, p2:false }
+  });
+  myRole = "p1";
+  enterRoom(id);
+};
+
+$("btnJoinRoom").onclick = async ()=>{
+  if(!dbReady){ $("lobbyErr").textContent = "Chưa kết nối được máy chủ."; return; }
+  const id = $("joinRoomInput").value.trim().toUpperCase();
+  if(!id){ $("lobbyErr").textContent = "Nhập mã phòng."; return; }
+  const roomRef = ref(db, "rooms/"+id);
+  const snap = await get(roomRef);
+  if(!snap.exists()){ $("lobbyErr").textContent = "Không tìm thấy phòng này."; return; }
+  const data = snap.val();
+  if(data.p2 && data.p2.nick && data.p2.nick !== myNick){
+    $("lobbyErr").textContent = "Phòng đã đủ người."; return;
+  }
+  if(!data.p2){
+    await update(roomRef, { p2: { nick: myNick }, status: "picking" });
+  }
+  myRole = (data.p1 && data.p1.nick === myNick) ? "p1" : "p2";
+  $("lobbyErr").textContent = "";
+  enterRoom(id);
+};
+
+function enterRoom(id){
+  currentRoomId = id;
+  showOnly(screenRoom);
+  $("roomIdChip").textContent = "Mã phòng: " + id;
+  if(roomUnsub) roomUnsub();
+  roomUnsub = onValue(ref(db, "rooms/"+id), (snap)=>{
+    if(!snap.exists()){
+      alert("Phòng đã bị đóng.");
+      leaveRoom();
+      return;
+    }
+    roomState = snap.val();
+    renderRoom();
+  });
+}
+
+$("btnLeaveRoom").onclick = leaveRoom;
+function leaveRoom(){
+  if(roomUnsub){ roomUnsub(); roomUnsub=null; }
+  disposeThree();
+  currentRoomId = null; myRole = null; roomState = null;
+  goLobby();
+}
+
+/* ===================== ROOM RENDER (routing) ===================== */
+function renderRoom(){
+  if(!roomState) return;
+  const p1 = roomState.p1, p2 = roomState.p2;
+  $("playersStrip").innerHTML = `
+    <span class="${roomState.turn==='p1'?'turn-on':''}">${p1?escapeHtml(p1.nick):'—'}</span>
+    <span>vs</span>
+    <span class="${roomState.turn==='p2'?'turn-on':''}">${p2?escapeHtml(p2.nick):'đang chờ…'}</span>
+  `;
+
+  const bothIn = p1 && p2;
+  $("pickerWrap").classList.toggle("hidden", !(bothIn && !roomState.game && myRole==='p1' && roomState.status!=='finished'));
+  $("waitingWrap").classList.toggle("hidden", !!(bothIn) );
+  if(!bothIn){
+    $("boardWrap").innerHTML = "";
+    $("statusLine").textContent = "";
+    $("postGameActions").classList.add("hidden");
+    return;
+  }
+  if(bothIn && !roomState.game){
+    $("boardWrap").innerHTML = "";
+    $("statusLine").textContent = myRole==='p1' ? "" : "Đang chờ chủ phòng chọn trò chơi…";
+    $("postGameActions").classList.add("hidden");
+    return;
+  }
+
+  // a game is active
+  if(roomState.game === "caro") renderCaro();
+  else if(roomState.game === "chess") renderChess();
+  else if(roomState.game === "connect4") renderConnect4();
+
+  // finished state / rematch
+  if(roomState.status === "finished"){
+    $("postGameActions").classList.remove("hidden");
+    const wtxt = roomState.winner === "draw" ? "Hòa!" :
+      (roomState.winner === myRole ? "Bạn thắng! 🎉" : "Bạn thua.");
+    $("statusLine").textContent = wtxt;
+  } else {
+    $("postGameActions").classList.add("hidden");
+  }
+}
+
+document.querySelectorAll(".game-card").forEach(card=>{
+  card.onclick = async ()=>{
+    if(myRole !== 'p1') return;
+    const g = card.dataset.game;
+    const initBoard = g === 'caro' ? { cells: {}, size: 15 } :
+                       g === 'connect4' ? { cells: Array(42).fill(null) } : null;
+    const initFen = g === 'chess' ? "start" : null;
+    await update(ref(db, "rooms/"+currentRoomId), {
+      game: g, status: "playing", turn: "p1",
+      board: initBoard, fen: initFen, lastMove: null, winner: null,
+      rematch: { p1:false, p2:false }
+    });
+  };
+});
+
+$("btnRematch").onclick = async ()=>{
+  await update(ref(db, "rooms/"+currentRoomId+"/rematch"), { [myRole]: true });
+  const snap = await get(ref(db, "rooms/"+currentRoomId+"/rematch"));
+  const r = snap.val();
+  if(r.p1 && r.p2){
+    const g = roomState.game;
+    const initBoard = g === 'caro' ? { cells: {}, size: 15 } :
+                       g === 'connect4' ? { cells: Array(42).fill(null) } : null;
+    const initFen = g === 'chess' ? "start" : null;
+    await update(ref(db, "rooms/"+currentRoomId), {
+      status: "playing", turn: "p1", board: initBoard, fen: initFen,
+      lastMove: null, winner: null, rematch: { p1:false, p2:false }
+    });
+  }
+};
+$("btnBackLobby").onclick = async ()=>{
+  if(myRole === 'p1'){
+    await update(ref(db, "rooms/"+currentRoomId), { game:null, status:"picking", board:null, fen:null, winner:null });
+  }
+};
+
+/* ===================== ELO ===================== */
+async function applyEloUpdate(winnerRole){
+  // Only p1 client commits the elo write, to avoid double-write races.
+  if(myRole !== 'p1') return;
+  const p1nick = roomState.p1.nick, p2nick = roomState.p2.nick;
+  const k1 = keyify(p1nick), k2 = keyify(p2nick);
+  const [s1, s2] = await Promise.all([get(ref(db,"leaderboard/"+k1)), get(ref(db,"leaderboard/"+k2))]);
+  const d1 = s1.exists()? s1.val() : {nick:p1nick, elo:1200, wins:0, losses:0, draws:0};
+  const d2 = s2.exists()? s2.val() : {nick:p2nick, elo:1200, wins:0, losses:0, draws:0};
+  const K = 32;
+  const exp1 = 1/(1+Math.pow(10,(d2.elo-d1.elo)/400));
+  const exp2 = 1 - exp1;
+  let score1, score2;
+  if(winnerRole==='draw'){ score1=0.5; score2=0.5; d1.draws=(d1.draws||0)+1; d2.draws=(d2.draws||0)+1; }
+  else if(winnerRole==='p1'){ score1=1; score2=0; d1.wins=(d1.wins||0)+1; d2.losses=(d2.losses||0)+1; }
+  else { score1=0; score2=1; d1.losses=(d1.losses||0)+1; d2.wins=(d2.wins||0)+1; }
+  d1.elo = Math.round(d1.elo + K*(score1-exp1));
+  d2.elo = Math.round(d2.elo + K*(score2-exp2));
+  d1.nick = p1nick; d2.nick = p2nick;
+  await set(ref(db,"leaderboard/"+k1), d1);
+  await set(ref(db,"leaderboard/"+k2), d2);
+  if(p1nick===myNick) myElo = d1.elo;
+  if(p2nick===myNick) myElo = d2.elo;
+}
+
+async function endGame(winnerRole){
+  await update(ref(db,"rooms/"+currentRoomId), { status:"finished", winner: winnerRole });
+  await applyEloUpdate(winnerRole);
+}
+
+/* ===================== THREE.JS HELPERS ===================== */
+function disposeThree(){
+  if(threeCtx){
+    cancelAnimationFrame(threeCtx.raf);
+    threeCtx.renderer.dispose();
+    threeCtx = null;
+  }
+  $("boardWrap").innerHTML = "";
+}
+
+/* ===================================================================
+   CARO (Gomoku 15x15) — CSS 3D pieces
+=================================================================== */
+function renderCaro(){
+  disposeThree();
+  const size = (roomState.board && roomState.board.size) || 15;
+  const cells = (roomState.board && roomState.board.cells) || {};
+  const wrap = document.createElement("div");
+  wrap.className = "board-frame";
+  wrap.style.overflowX = "auto";
+  const grid = document.createElement("div");
+  grid.id = "caroBoard";
+  grid.style.gridTemplateColumns = `repeat(${size}, 26px)`;
+  wrap.appendChild(grid);
+  $("boardWrap").innerHTML = "";
+  $("boardWrap").appendChild(wrap);
+
+  const winLine = computeCaroWin(cells, size);
+
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
+      const key = r+"_"+c;
+      const cell = document.createElement("div");
+      cell.className = "caro-cell";
+      const val = cells[key];
+      if(val){
+        const stone = document.createElement("div");
+        stone.className = "stone " + (val==='p1'?'x':'o');
+        cell.appendChild(stone);
+      }
+      if(winLine && winLine.has(key)) cell.classList.add("win");
+      cell.onclick = ()=> caroMove(r,c,cells,size);
+      grid.appendChild(cell);
+    }
+  }
+
+  const myTurn = roomState.turn === myRole && roomState.status==='playing';
+  $("statusLine").textContent = roomState.status!=='playing' ? "" :
+    (myTurn ? "Đến lượt bạn (" + (myRole==='p1'?'●':'○') + ")" : "Đang chờ đối thủ đi…");
+}
+
+function computeCaroWin(cells, size){
+  const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+  for(const key in cells){
+    const val = cells[key];
+    const [r,c] = key.split("_").map(Number);
+    for(const [dr,dc] of dirs){
+      const line = new Set([key]);
+      let rr=r, cc=c;
+      for(let i=1;i<5;i++){
+        rr+=dr; cc+=dc;
+        const k2 = rr+"_"+cc;
+        if(cells[k2]===val){ line.add(k2); } else break;
+      }
+      if(line.size>=5) return line;
+    }
+  }
+  return null;
+}
+
+async function caroMove(r,c,cells,size){
+  if(roomState.status!=='playing') return;
+  if(roomState.turn!==myRole) return;
+  const key = r+"_"+c;
+  if(cells[key]) return;
+  const newCells = {...cells, [key]: myRole};
+  await update(ref(db,"rooms/"+currentRoomId), {
+    ["board/cells/"+key]: myRole,
+    lastMove: {r,c}
+  });
+  const win = computeCaroWin(newCells, size);
+  if(win){ await endGame(myRole); return; }
+  const full = Object.keys(newCells).length >= size*size;
+  if(full){ await endGame("draw"); return; }
+  await update(ref(db,"rooms/"+currentRoomId), { turn: myRole==='p1'?'p2':'p1' });
+}
+
+/* ===================================================================
+   CONNECT 4 (7 cols x 6 rows) — three.js 3D falling discs
+=================================================================== */
+const C4_COLS=7, C4_ROWS=6;
+function c4Idx(col,row){ return row*C4_COLS+col; } // row 0 = bottom
+
+function renderConnect4(){
+  const cells = (roomState.board && roomState.board.cells) || Array(C4_COLS*C4_ROWS).fill(null);
+
+  if(!threeCtx || threeCtx.kind!=='connect4'){
+    disposeThree();
+    const holder = document.createElement("div");
+    $("boardWrap").innerHTML = ""; $("boardWrap").appendChild(holder);
+
+    const W = Math.min(560, window.innerWidth-32);
+    const H = W * 0.78;
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1f3b2c);
+    const camera = new THREE.PerspectiveCamera(45, W/H, 0.1, 100);
+    camera.position.set(0, 2, 13);
+    camera.lookAt(0,0.5,0);
+    const renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(W,H);
+    renderer.domElement.className = "gl";
+    holder.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.8);
+    dl.position.set(5,10,7);
+    scene.add(dl);
+
+    // frame
+    const frameMat = new THREE.MeshStandardMaterial({color:0x3a2418});
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(C4_COLS*1.05+0.3, C4_ROWS*1.05+0.3, 0.5), frameMat);
+    frame.position.z = -0.4;
+    scene.add(frame);
+
+    const holeGeo = new THREE.CircleGeometry(0.42, 24);
+    const holeMat = new THREE.MeshStandardMaterial({color:0x14251b});
+    const discGroup = new THREE.Group();
+    scene.add(discGroup);
+
+    const originX = -( (C4_COLS-1)*1.05 )/2;
+    const originY = -( (C4_ROWS-1)*1.05 )/2;
+
+    for(let col=0; col<C4_COLS; col++){
+      for(let row=0; row<C4_ROWS; row++){
+        const hole = new THREE.Mesh(holeGeo, holeMat);
+        hole.position.set(originX+col*1.05, originY+row*1.05, -0.14);
+        scene.add(hole);
+      }
+    }
+
+    // invisible click columns
+    const colMeshes = [];
+    const clickGeo = new THREE.BoxGeometry(1.0, C4_ROWS*1.05+0.3, 1.2);
+    const clickMat = new THREE.MeshBasicMaterial({visible:false});
+    for(let col=0; col<C4_COLS; col++){
+      const m = new THREE.Mesh(clickGeo, clickMat);
+      m.position.set(originX+col*1.05, 0, 0.2);
+      m.userData.col = col;
+      scene.add(m);
+      colMeshes.push(m);
+    }
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    function pickCol(clientX, clientY){
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((clientX-rect.left)/rect.width)*2-1;
+      mouse.y = -((clientY-rect.top)/rect.height)*2+1;
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(colMeshes);
+      return hits.length ? hits[0].object.userData.col : null;
+    }
+    renderer.domElement.addEventListener("click",(e)=>{
+      const col = pickCol(e.clientX, e.clientY);
+      if(col!==null) connect4Move(col);
+    });
+
+    let animating = [];
+    function animate(){
+      threeCtx.raf = requestAnimationFrame(animate);
+      animating.forEach(a=>{
+        a.mesh.position.y += (a.targetY - a.mesh.position.y) * 0.18;
+      });
+      renderer.render(scene, camera);
+    }
+    threeCtx = { kind:'connect4', renderer, scene, camera, discGroup, originX, originY, animating, colMeshes };
+    animate();
+  }
+
+  // sync discs
+  const existing = threeCtx.discGroup.children.length;
+  const filled = cells.filter(v=>v).length;
+  if(filled > existing){
+    // find newly filled cell(s) - just rebuild diff by scanning
+    for(let i=existing;i<filled;i++){ /* handled below by full rebuild for correctness */ }
+  }
+  // simplest robust approach: rebuild disc meshes fully each render (counts are small)
+  threeCtx.discGroup.clear();
+  threeCtx.animating.length = 0;
+  for(let col=0; col<C4_COLS; col++){
+    for(let row=0; row<C4_ROWS; row++){
+      const v = cells[c4Idx(col,row)];
+      if(!v) continue;
+      const geo = new THREE.CylinderGeometry(0.42,0.42,0.22,24);
+      const mat = new THREE.MeshStandardMaterial({color: v==='p1' ? 0xb3432b : 0xe2c27f, metalness:0.2, roughness:0.4});
+      const disc = new THREE.Mesh(geo, mat);
+      disc.rotation.x = Math.PI/2;
+      const targetY = threeCtx.originY+row*1.05;
+      const isLast = roomState.lastMove && roomState.lastMove.col===col && roomState.lastMove.row===row;
+      disc.position.set(threeCtx.originX+col*1.05, isLast ? targetY+4 : targetY, 0);
+      threeCtx.discGroup.add(disc);
+      if(isLast) threeCtx.animating.push({mesh:disc, targetY});
+    }
+  }
+
+  const win = computeConnect4Win(cells);
+  const myTurn = roomState.turn === myRole && roomState.status==='playing';
+  $("statusLine").textContent = roomState.status!=='playing' ? "" :
+    (myTurn ? "Đến lượt bạn — chạm vào một cột để thả quân" : "Đang chờ đối thủ đi…");
+  if(win && roomState.status==='playing'){ /* handled by move logic already calling endGame */ }
+}
+
+function computeConnect4Win(cells){
+  const dirs=[[1,0],[0,1],[1,1],[1,-1]];
+  for(let col=0;col<C4_COLS;col++){
+    for(let row=0;row<C4_ROWS;row++){
+      const v = cells[c4Idx(col,row)];
+      if(!v) continue;
+      for(const [dc,dr] of dirs){
+        let count=1;
+        for(let i=1;i<4;i++){
+          const cc=col+dc*i, rr=row+dr*i;
+          if(cc<0||cc>=C4_COLS||rr<0||rr>=C4_ROWS) break;
+          if(cells[c4Idx(cc,rr)]===v) count++; else break;
+        }
+        if(count>=4) return true;
+      }
+    }
+  }
+  return false;
+}
+
+async function connect4Move(col){
+  if(roomState.status!=='playing') return;
+  if(roomState.turn!==myRole) return;
+  const cells = (roomState.board && roomState.board.cells) ? [...roomState.board.cells] : Array(C4_COLS*C4_ROWS).fill(null);
+  let targetRow = -1;
+  for(let row=0; row<C4_ROWS; row++){
+    if(!cells[c4Idx(col,row)]){ targetRow = row; break; }
+  }
+  if(targetRow===-1) return; // column full
+  cells[c4Idx(col,targetRow)] = myRole;
+  await update(ref(db,"rooms/"+currentRoomId), {
+    "board/cells": cells,
+    lastMove: { col, row: targetRow }
+  });
+  if(computeConnect4Win(cells)){ await endGame(myRole); return; }
+  if(cells.every(v=>v)){ await endGame("draw"); return; }
+  await update(ref(db,"rooms/"+currentRoomId), { turn: myRole==='p1'?'p2':'p1' });
+}
+
+/* ===================================================================
+   CHESS — chess.js rules, 2D board (clear black/white pieces)
+=================================================================== */
+let chessSelected = null;
+const CHESS_UNICODE = {
+  p:{w:'♙',b:'♟'}, r:{w:'♖',b:'♜'}, n:{w:'♘',b:'♞'},
+  b:{w:'♗',b:'♝'}, q:{w:'♕',b:'♛'}, k:{w:'♔',b:'♚'}
+};
+
+function renderChess(){
+  disposeThree();
+  const fenState = roomState.fen;
+  if(!chessGame) chessGame = new window.Chess();
+  if(fenState && fenState!=='start') chessGame.load(fenState); else chessGame.reset();
+
+  // fresh game just started -> clear any stale local selection
+  if((!fenState || fenState==='start') && !roomState.lastMove) chessSelected = null;
+
+  const frame = document.createElement("div");
+  frame.className = "board-frame";
+  const boardEl = document.createElement("div");
+  boardEl.id = "chessBoard";
+  frame.appendChild(boardEl);
+  $("boardWrap").innerHTML = "";
+  $("boardWrap").appendChild(frame);
+
+  const flip = myRole === 'p2';
+  const displayRanks = flip ? [1,2,3,4,5,6,7,8] : [8,7,6,5,4,3,2,1];
+  const displayFiles = flip ? ['h','g','f','e','d','c','b','a'] : ['a','b','c','d','e','f','g','h'];
+
+  const legalMoves = chessSelected ? chessGame.moves({square:chessSelected, verbose:true}) : [];
+  const legalTargets = {};
+  legalMoves.forEach(m=> legalTargets[m.to] = /[ce]/.test(m.flags) );
+
+  displayRanks.forEach((rank)=>{
+    displayFiles.forEach((file)=>{
+      const sq = file+rank;
+      const cell = document.createElement("div");
+      const isLight = (("abcdefgh".indexOf(file) + rank) % 2 === 0);
+      cell.className = "chess-cell " + (isLight ? "light":"dark");
+      const piece = chessGame.get(sq);
+      if(piece){
+        cell.textContent = CHESS_UNICODE[piece.type][piece.color];
+        cell.classList.add(piece.color==='w' ? 'piece-w':'piece-b');
+      }
+      if(chessSelected===sq) cell.classList.add("selected");
+      if(sq in legalTargets) cell.classList.add(legalTargets[sq] ? "legal-capture":"legal");
+      cell.onclick = ()=> chessSquareClicked(sq);
+      boardEl.appendChild(cell);
+    });
+  });
+
+  const inCheckFn = chessGame.in_check ? chessGame.in_check.bind(chessGame) : chessGame.isCheck.bind(chessGame);
+  const myTurn = roomState.turn === myRole && roomState.status==='playing';
+  const turnColor = chessGame.turn();
+  $("statusLine").textContent = roomState.status!=='playing' ? "" :
+    (myTurn ? "Đến lượt bạn (" + (turnColor==='w'?'Trắng':'Đen') + ")" + (inCheckFn() ? " — Chiếu!" : "")
+      : "Đang chờ đối thủ đi…");
+}
+
+async function chessSquareClicked(sq){
+  if(roomState.status!=='playing') return;
+  const myColor = myRole==='p1' ? 'w' : 'b';
+  if(chessGame.turn()!==myColor) return;
+  if(roomState.turn!==myRole) return;
+
+  if(chessSelected){
+    if(chessSelected===sq){ chessSelected=null; renderChess(); return; }
+    const legal = chessGame.moves({square:chessSelected, verbose:true}).some(m=>m.to===sq);
+    if(!legal){
+      const piece = chessGame.get(sq);
+      if(piece && piece.color===myColor){ chessSelected=sq; renderChess(); }
+      else { chessSelected=null; renderChess(); }
+      return;
+    }
+    const move = chessGame.move({from:chessSelected, to:sq, promotion:'q'});
+    chessSelected = null;
+    const newFen = chessGame.fen();
+    let winner = null;
+    const isCheckmate = chessGame.in_checkmate ? chessGame.in_checkmate() : chessGame.isCheckmate();
+    const isDraw = chessGame.in_draw ? chessGame.in_draw() : chessGame.isDraw();
+    if(isCheckmate) winner = myRole;
+    else if(isDraw) winner = "draw";
+
+    await update(ref(db,"rooms/"+currentRoomId), {
+      fen: newFen,
+      lastMove: { from: move.from, to: move.to },
+      turn: myRole==='p1' ? 'p2' : 'p1'
+    });
+    if(winner) await endGame(winner);
+  } else {
+    const piece = chessGame.get(sq);
+    if(piece && piece.color===myColor){ chessSelected=sq; renderChess(); }
+  }
+}
+
+/* ===================== BOOT ===================== */
+(async function boot(){
+  if(myNick){
+    await ensureLeaderboardEntry();
+    goLobby();
+  } else {
+    showOnly(screenNick);
+  }
+})();
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+</body>
+</html>
