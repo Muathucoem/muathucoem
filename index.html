@@ -164,23 +164,55 @@
     width:100%;
   }
 
-  /* 2D chess board */
+  /* 2D chess board — chess.com style */
   #chessBoard{
     display:grid;grid-template-columns:repeat(8,1fr);
     width:100%;max-width:460px;aspect-ratio:1/1;
-    border-radius:6px;overflow:hidden;border:1px solid rgba(0,0,0,.4);
+    border-radius:4px;overflow:hidden;border:1px solid rgba(0,0,0,.4);
   }
   .chess-cell{
     display:flex;align-items:center;justify-content:center;
     font-size:clamp(22px,7.5vw,38px);cursor:pointer;position:relative;user-select:none;
   }
-  .chess-cell.light{background:#e8dcc0;}
-  .chess-cell.dark{background:#6b4a32;}
+  .chess-cell.light{background:#eeeed2;}
+  .chess-cell.dark{background:#769656;}
   .chess-cell.selected{box-shadow:inset 0 0 0 3px var(--gold-bright);}
-  .chess-cell.legal::after{content:"";position:absolute;width:24%;height:24%;border-radius:50%;background:rgba(31,59,44,.55);}
-  .chess-cell.legal-capture{box-shadow:inset 0 0 0 3px rgba(179,67,43,.85);}
+  .chess-cell.legal::after{content:"";position:absolute;width:24%;height:24%;border-radius:50%;background:rgba(0,0,0,.22);}
+  .chess-cell.legal-capture{box-shadow:inset 0 0 0 4px rgba(0,0,0,.35);}
+  .chess-cell.hint-move{box-shadow:inset 0 0 0 4px #3a9bd9;}
   .piece-w{color:#ffffff;text-shadow:0 1px 1px rgba(0,0,0,.55), 0 0 3px rgba(0,0,0,.35);}
-  .piece-b{color:#1a120c;text-shadow:0 1px 1px rgba(255,255,255,.4);}
+  .piece-b{color:#1a120c;text-shadow:0 1px 1px rgba(255,255,255,.35);}
+  .coord-label{position:absolute;font-size:9px;font-weight:800;opacity:.8;pointer-events:none;}
+  .coord-file{right:3px;bottom:1px;}
+  .coord-rank{left:3px;top:1px;}
+
+  /* chat + emote */
+  .chat-box{margin-top:16px;}
+  .chat-messages{
+    max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;
+    padding-right:2px;margin-bottom:4px;
+  }
+  .chat-msg{max-width:80%;padding:7px 11px;border-radius:12px;font-size:.85rem;line-height:1.3;word-break:break-word;}
+  .chat-msg.me{align-self:flex-end;background:rgba(201,161,90,.28);border-bottom-right-radius:3px;}
+  .chat-msg.them{align-self:flex-start;background:rgba(0,0,0,.28);border-bottom-left-radius:3px;}
+  .chat-msg .who{font-size:.68rem;color:var(--ivory-dim);display:block;margin-bottom:2px;}
+  .chat-msg.emote-msg{font-size:1.6rem;padding:4px 10px;background:transparent;}
+  .emote-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+  .emote-btn{padding:6px 10px;font-size:1.1rem;background:rgba(0,0,0,.22);border:1px solid rgba(201,161,90,.3);color:var(--ivory);}
+  .emote-btn:hover{background:rgba(201,161,90,.2);}
+  #chatInput{flex:1;}
+
+  .emote-float{
+    position:fixed;font-size:3rem;pointer-events:none;z-index:999;
+    left:50%;top:45%;transform:translate(-50%,-50%);
+    animation:emoteFloat 1.3s ease-out forwards;
+  }
+  @keyframes emoteFloat{
+    0%{opacity:0;transform:translate(-50%,-40%) scale(.4);}
+    20%{opacity:1;transform:translate(-50%,-55%) scale(1.15);}
+    75%{opacity:1;transform:translate(-50%,-90%) scale(1);}
+    100%{opacity:0;transform:translate(-50%,-110%) scale(.9);}
+  }
 
   .status-line{margin:14px 0;font-size:1rem;color:var(--gold-bright);min-height:1.4em;text-align:center;}
   .actions-row{display:flex;gap:10px;margin-top:10px;}
@@ -303,7 +335,7 @@
       <p class="sub">Người tạo phòng chọn trò cho cả hai</p>
       <div class="game-picker">
         <div class="game-card" data-game="caro"><span class="emoji">⚫⚪</span><span class="name">Caro</span></div>
-        <div class="game-card" data-game="chess"><span class="emoji">♞</span><span class="name">Cờ Vua 3D</span></div>
+        <div class="game-card" data-game="chess"><span class="emoji">♞</span><span class="name">Cờ Vua</span></div>
         <div class="game-card" data-game="connect4"><span class="emoji">🔴🟡</span><span class="name">Nối 4 (3D)</span></div>
       </div>
     </div>
@@ -315,11 +347,31 @@
 
     <div class="status-line" id="statusLine"></div>
 
+    <button id="btnHint" class="ghost hidden" style="margin-bottom:10px;">💡 Gợi ý nước đi (Admin)</button>
+
     <div class="board-wrap" id="boardWrap"></div>
 
     <div class="actions-row hidden" id="postGameActions">
       <button id="btnRematch">Chơi lại</button>
       <button class="ghost" id="btnBackLobby">Về sảnh</button>
+    </div>
+
+    <!-- chat + emote -->
+    <div class="panel chat-box" style="max-width:480px;">
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="emote-row" id="emoteRow">
+        <button class="emote-btn" data-emote="👍">👍</button>
+        <button class="emote-btn" data-emote="😂">😂</button>
+        <button class="emote-btn" data-emote="😮">😮</button>
+        <button class="emote-btn" data-emote="😡">😡</button>
+        <button class="emote-btn" data-emote="❤️">❤️</button>
+        <button class="emote-btn" data-emote="🎉">🎉</button>
+        <button class="emote-btn" data-emote="😢">😢</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <input type="text" id="chatInput" maxlength="200" placeholder="Nhắn gì đó…">
+        <button id="btnSendChat" style="flex:none;padding:11px 16px;">Gửi</button>
+      </div>
     </div>
   </div>
 
@@ -336,7 +388,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import {
-  getDatabase, ref, set, get, update, onValue, remove, runTransaction, onDisconnect, child
+  getDatabase, ref, set, get, update, onValue, remove, runTransaction, onDisconnect, child, push
 } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 import * as THREE from "three";
 
@@ -377,8 +429,12 @@ let myRole = null; // 'p1' | 'p2'
 let currentRoomId = null;
 let roomUnsub = null;
 let roomState = null;
+let chatUnsub = null;
+let seenChatKeys = null;
 let allRoomsUnsub = null;
 let chessGame = null; // chess.js instance mirror for local validation
+let chessHint = null; // { fen, from, to } — admin-only engine suggestion
+let sfWorker = null;  // lazily-loaded Stockfish engine worker
 let threeCtx = null; // holds renderer/scene per active 3D game, disposed on leave
 
 /* ===================== DOM ===================== */
@@ -664,26 +720,67 @@ async function joinRoomById(id, preloadedData){
   enterRoom(id);
 }
 
+let activeDisconnectHooks = []; // onDisconnect refs to cancel on manual leave
+
 function enterRoom(id){
   currentRoomId = id;
   showOnly(screenRoom);
   $("roomIdChip").textContent = "Mã phòng: " + id;
   if(roomUnsub) roomUnsub();
+
+  // clear any leftover disconnect hooks from a previous room
+  activeDisconnectHooks.forEach(h=>h.cancel().catch(()=>{}));
+  activeDisconnectHooks = [];
+
+  if(myRole === 'p1'){
+    const roomRef = ref(db, "rooms/"+id);
+    const hook = onDisconnect(roomRef);
+    hook.remove();
+    activeDisconnectHooks.push(hook);
+  } else if(myRole === 'p2'){
+    const p2Ref = ref(db, "rooms/"+id+"/p2");
+    const statusRef = ref(db, "rooms/"+id+"/status");
+    const hook1 = onDisconnect(p2Ref); hook1.remove();
+    const hook2 = onDisconnect(statusRef); hook2.set("waiting");
+    activeDisconnectHooks.push(hook1, hook2);
+  }
+
   roomUnsub = onValue(ref(db, "rooms/"+id), (snap)=>{
     if(!snap.exists()){
       alert("Phòng đã bị đóng.");
-      leaveRoom();
+      leaveRoom(true);
       return;
     }
     roomState = snap.val();
     renderRoom();
   });
+
+  seenChatKeys = null; // reset so first batch doesn't trigger emote pop
+  if(chatUnsub) chatUnsub();
+  chatUnsub = onValue(ref(db, "rooms/"+id+"/chat"), (snap)=>{
+    renderChat(snap.val() || {});
+  });
 }
 
-$("btnLeaveRoom").onclick = leaveRoom;
-function leaveRoom(){
+$("btnLeaveRoom").onclick = ()=> leaveRoom(false);
+function leaveRoom(alreadyGone){
   if(roomUnsub){ roomUnsub(); roomUnsub=null; }
+  if(chatUnsub){ chatUnsub(); chatUnsub=null; }
+  seenChatKeys = null;
+  chessHint = null;
   disposeThree();
+
+  activeDisconnectHooks.forEach(h=>h.cancel().catch(()=>{}));
+  activeDisconnectHooks = [];
+
+  if(!alreadyGone && currentRoomId){
+    if(myRole === 'p1'){
+      remove(ref(db, "rooms/"+currentRoomId)).catch(()=>{});
+    } else if(myRole === 'p2'){
+      update(ref(db, "rooms/"+currentRoomId), { p2: null, status: "waiting" }).catch(()=>{});
+    }
+  }
+
   currentRoomId = null; myRole = null; roomState = null;
   goLobby();
 }
@@ -811,6 +908,7 @@ function disposeThree(){
 =================================================================== */
 function renderCaro(){
   disposeThree();
+  $("btnHint").classList.add("hidden");
   const size = (roomState.board && roomState.board.size) || 15;
   const cells = (roomState.board && roomState.board.cells) || {};
   const wrap = document.createElement("div");
@@ -890,6 +988,7 @@ const C4_COLS=7, C4_ROWS=6;
 function c4Idx(col,row){ return row*C4_COLS+col; } // row 0 = bottom
 
 function renderConnect4(){
+  $("btnHint").classList.add("hidden");
   const cells = (roomState.board && roomState.board.cells) || Array(C4_COLS*C4_ROWS).fill(null);
 
   if(!threeCtx || threeCtx.kind!=='connect4'){
@@ -1056,6 +1155,56 @@ const CHESS_UNICODE = {
   b:{w:'♗',b:'♝'}, q:{w:'♕',b:'♛'}, k:{w:'♔',b:'♚'}
 };
 
+/* --- admin-only engine hint (Stockfish, loaded lazily as a Web Worker) --- */
+async function loadStockfish(){
+  if(sfWorker) return sfWorker;
+  const resp = await fetch("https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js");
+  const code = await resp.text();
+  const blob = new Blob([code], {type:"application/javascript"});
+  sfWorker = new Worker(URL.createObjectURL(blob));
+  await new Promise(resolveReady=>{
+    function onMsg(e){
+      if(e.data === "uciok"){ sfWorker.removeEventListener("message", onMsg); resolveReady(); }
+    }
+    sfWorker.addEventListener("message", onMsg);
+    sfWorker.postMessage("uci");
+  });
+  return sfWorker;
+}
+
+$("btnHint").onclick = async ()=>{
+  if(!myIsAdmin || !chessGame) return;
+  const btn = $("btnHint");
+  btn.disabled = true;
+  const oldText = btn.textContent;
+  btn.textContent = "Đang tính…";
+  try{
+    const worker = await loadStockfish();
+    const fen = chessGame.fen();
+    const bestMove = await new Promise(resolve=>{
+      function onMsg(e){
+        if(typeof e.data === "string" && e.data.startsWith("bestmove")){
+          worker.removeEventListener("message", onMsg);
+          resolve(e.data.split(" ")[1]);
+        }
+      }
+      worker.addEventListener("message", onMsg);
+      worker.postMessage("position fen " + fen);
+      worker.postMessage("go depth 16");
+    });
+    if(bestMove && bestMove !== "(none)"){
+      chessHint = { fen, from: bestMove.slice(0,2), to: bestMove.slice(2,4) };
+      renderChess();
+    }
+  } catch(err){
+    console.error("Stockfish error", err);
+    alert("Không tải được engine — kiểm tra kết nối mạng.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
+};
+
 function renderChess(){
   disposeThree();
   const fenState = roomState.fen;
@@ -1081,12 +1230,21 @@ function renderChess(){
   const legalTargets = {};
   legalMoves.forEach(m=> legalTargets[m.to] = /[ce]/.test(m.flags) );
 
-  displayRanks.forEach((rank)=>{
-    displayFiles.forEach((file)=>{
+  const lastFrom = roomState.lastMove ? roomState.lastMove.from : null;
+  const lastTo = roomState.lastMove ? roomState.lastMove.to : null;
+
+  displayRanks.forEach((rank, rIdx)=>{
+    displayFiles.forEach((file, fIdx)=>{
       const sq = file+rank;
       const cell = document.createElement("div");
       const isLight = (("abcdefgh".indexOf(file) + rank) % 2 === 0);
       cell.className = "chess-cell " + (isLight ? "light":"dark");
+      if(sq===lastFrom || sq===lastTo){
+        cell.style.background = isLight ? "#f6f682" : "#bbcb44";
+      }
+      if(chessHint && chessHint.fen === chessGame.fen() && (sq===chessHint.from || sq===chessHint.to)){
+        cell.classList.add("hint-move");
+      }
       const piece = chessGame.get(sq);
       if(piece){
         cell.textContent = CHESS_UNICODE[piece.type][piece.color];
@@ -1094,6 +1252,20 @@ function renderChess(){
       }
       if(chessSelected===sq) cell.classList.add("selected");
       if(sq in legalTargets) cell.classList.add(legalTargets[sq] ? "legal-capture":"legal");
+      if(fIdx===0){
+        const rl = document.createElement("span");
+        rl.className = "coord-label coord-rank";
+        rl.style.color = isLight ? "#769656" : "#eeeed2";
+        rl.textContent = rank;
+        cell.appendChild(rl);
+      }
+      if(rIdx===7){
+        const fl = document.createElement("span");
+        fl.className = "coord-label coord-file";
+        fl.style.color = isLight ? "#769656" : "#eeeed2";
+        fl.textContent = file;
+        cell.appendChild(fl);
+      }
       cell.onclick = ()=> chessSquareClicked(sq);
       boardEl.appendChild(cell);
     });
@@ -1105,6 +1277,8 @@ function renderChess(){
   $("statusLine").textContent = roomState.status!=='playing' ? "" :
     (myTurn ? "Đến lượt bạn (" + (turnColor==='w'?'Trắng':'Đen') + ")" + (inCheckFn() ? " — Chiếu!" : "")
       : "Đang chờ đối thủ đi…");
+
+  $("btnHint").classList.toggle("hidden", !(myIsAdmin && roomState.status==='playing'));
 }
 
 async function chessSquareClicked(sq){
@@ -1142,6 +1316,71 @@ async function chessSquareClicked(sq){
     if(piece && piece.color===myColor){ chessSelected=sq; renderChess(); }
   }
 }
+
+/* ===================== CHAT + EMOTE ===================== */
+async function sendChatMessage(text, isEmote){
+  if(!currentRoomId || !text) return;
+  await push(ref(db, "rooms/"+currentRoomId+"/chat"), {
+    sender: myRole || "spec",
+    nick: myNick,
+    text,
+    emote: !!isEmote,
+    ts: Date.now()
+  });
+}
+
+$("btnSendChat").onclick = ()=>{
+  const val = $("chatInput").value.trim();
+  if(!val) return;
+  sendChatMessage(val, false);
+  $("chatInput").value = "";
+};
+$("chatInput").addEventListener("keydown",(e)=>{
+  if(e.key==="Enter"){ $("btnSendChat").click(); }
+});
+document.querySelectorAll(".emote-btn").forEach(btn=>{
+  btn.onclick = ()=> sendChatMessage(btn.dataset.emote, true);
+});
+
+function renderChat(chatObj){
+  const entries = Object.entries(chatObj).sort((a,b)=> a[1].ts - b[1].ts);
+  const box = $("chatMessages");
+  box.innerHTML = "";
+  entries.forEach(([key, m])=>{
+    const bubble = document.createElement("div");
+    const mine = m.sender === myRole;
+    bubble.className = "chat-msg " + (mine ? "me":"them") + (m.emote ? " emote-msg" : "");
+    if(m.emote){
+      bubble.textContent = m.text;
+    } else {
+      bubble.innerHTML = `<span class="who">${escapeHtml(m.nick)}</span>${escapeHtml(m.text)}`;
+    }
+    box.appendChild(bubble);
+  });
+  box.scrollTop = box.scrollHeight;
+
+  // trigger floating pop only for emotes newly arrived after initial load
+  if(seenChatKeys === null){
+    seenChatKeys = new Set(entries.map(([key])=>key));
+  } else {
+    entries.forEach(([key, m])=>{
+      if(!seenChatKeys.has(key)){
+        seenChatKeys.add(key);
+        if(m.emote) spawnEmoteFloat(m.text);
+      }
+    });
+  }
+}
+
+function spawnEmoteFloat(emoji){
+  const el = document.createElement("div");
+  el.className = "emote-float";
+  el.textContent = emoji;
+  el.style.left = (45 + Math.random()*10) + "%";
+  document.body.appendChild(el);
+  setTimeout(()=> el.remove(), 1400);
+}
+
 
 /* ===================== BOOT ===================== */
 (async function boot(){
