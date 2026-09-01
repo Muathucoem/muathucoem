@@ -186,6 +186,18 @@
   .actions-row{display:flex;gap:10px;margin-top:10px;}
 
   footer{margin-top:40px;color:rgba(242,233,216,.3);font-size:.75rem;text-align:center;}
+
+  .list-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:rgba(0,0,0,.2);border-radius:8px;padding:10px 12px;margin-bottom:8px;
+  }
+  .list-row .info{display:flex;flex-direction:column;gap:2px;}
+  .list-row .info .t1{font-weight:700;color:var(--ivory);}
+  .list-row .info .t2{font-size:.75rem;color:var(--ivory-dim);}
+  .list-row .acts{display:flex;gap:6px;}
+  .list-row .acts button{padding:6px 10px;font-size:.75rem;}
+  .mini-input{width:70px;padding:6px 8px;font-size:.85rem;border-radius:6px;border:1px solid rgba(201,161,90,.4);background:rgba(0,0,0,.25);color:var(--ivory);}
+  .banned-tag{color:#e28a7a;font-size:.72rem;font-weight:700;}
 </style>
 </head>
 <body>
@@ -196,14 +208,17 @@
     <p>Caro · Cờ Vua 3D · Nối 4 — chơi cùng bạn qua Room ID</p>
   </div>
 
-  <!-- SCREEN: NICKNAME -->
+  <!-- SCREEN: LOGIN -->
   <div id="screen-nick" class="panel">
-    <h2>Đặt biệt danh</h2>
-    <p class="sub">Đây là tên đối thủ sẽ thấy, và tên hiển thị trên bảng xếp hạng ELO.</p>
+    <h2>Đăng nhập</h2>
+    <p class="sub">Nhập biệt danh và mật khẩu. Nếu tên chưa tồn tại, tài khoản mới sẽ được tạo tự động.</p>
     <label for="nickInput">Biệt danh</label>
     <input type="text" id="nickInput" maxlength="16" placeholder="Vd: HoangDeCo">
+    <div style="height:10px;"></div>
+    <label for="passInput">Mật khẩu</label>
+    <input type="password" id="passInput" maxlength="40" placeholder="Ít nhất 4 ký tự">
     <div class="row">
-      <button id="btnSaveNick">Tiếp tục</button>
+      <button id="btnSaveNick">Đăng nhập / Đăng ký</button>
     </div>
     <div class="err" id="nickErr"></div>
   </div>
@@ -213,23 +228,41 @@
     <div class="me-badge">
       <span class="nick" id="lobbyNick"></span>
       <span class="elo" id="lobbyElo"></span>
-      <button class="ghost" id="btnChangeNick" style="padding:6px 10px;font-size:.78rem;">Đổi tên</button>
+      <span>
+        <button class="ghost hidden" id="btnAdminPanel" style="padding:6px 10px;font-size:.78rem;">⚙ Admin</button>
+        <button class="ghost" id="btnChangeNick" style="padding:6px 10px;font-size:.78rem;">Đăng xuất</button>
+      </span>
     </div>
 
     <h2>Tạo phòng mới</h2>
-    <p class="sub">Sinh một mã phòng để gửi cho đối thủ.</p>
-    <button id="btnCreateRoom">Tạo phòng</button>
+    <p class="sub">Đặt tên phòng cho bạn bè dễ nhận ra. Mật khẩu để trống nếu muốn ai cũng vào được.</p>
+    <label for="roomNameInput">Tên phòng</label>
+    <input type="text" id="roomNameInput" maxlength="24" placeholder="Vd: Phòng của Linh">
+    <div style="height:10px;"></div>
+    <label for="roomPassInput">Mật khẩu (không bắt buộc)</label>
+    <input type="text" id="roomPassInput" maxlength="20" placeholder="Để trống = phòng mở">
+    <div class="row">
+      <button id="btnCreateRoom">Tạo phòng</button>
+    </div>
+    <div class="err" id="lobbyErr"></div>
 
     <div style="height:1px;background:rgba(201,161,90,.25);margin:22px 0;"></div>
 
-    <h2>Vào phòng có sẵn</h2>
-    <p class="sub">Nhập mã phòng bạn nhận được.</p>
+    <h2>Vào phòng bằng mã</h2>
+    <p class="sub">Hoặc nhập mã phòng bạn nhận được.</p>
     <input type="text" id="joinRoomInput" maxlength="6" placeholder="VD: A3F9K2" style="text-transform:uppercase;">
     <div class="row">
       <button id="btnJoinRoom">Vào phòng</button>
     </div>
-    <div class="err" id="lobbyErr"></div>
   </div>
+
+  <!-- SCREEN: ROOM LIST -->
+  <div id="screen-roomlist" class="panel hidden" style="max-width:480px">
+    <h2>Phòng đang mở</h2>
+    <p class="sub">Bấm vào phòng để tham gia</p>
+    <div id="roomListBody"><p class="sub">Chưa có phòng nào.</p></div>
+  </div>
+
 
   <!-- SCREEN: LEADERBOARD (part of lobby, separate panel) -->
   <div id="screen-leaderboard" class="panel hidden" style="max-width:480px">
@@ -238,6 +271,20 @@
     <table class="board-table" id="lbTable">
       <tr><td colspan="4">Đang tải…</td></tr>
     </table>
+  </div>
+
+  <!-- SCREEN: ADMIN -->
+  <div id="screen-admin" class="panel hidden" style="max-width:560px">
+    <div class="row" style="margin:0 0 16px;">
+      <h2 style="margin:0;">Bảng quản trị</h2>
+      <button class="ghost" id="btnCloseAdmin" style="flex:none;padding:6px 10px;font-size:.78rem;">Đóng</button>
+    </div>
+    <p class="sub">Sửa ELO, cấm người chơi, hoặc vào bất kỳ phòng nào đang mở.</p>
+    <h2 style="font-size:1rem;margin-top:18px;">Người chơi</h2>
+    <div id="adminUsersBody"></div>
+    <div style="height:1px;background:rgba(201,161,90,.25);margin:20px 0;"></div>
+    <h2 style="font-size:1rem;">Phòng đang mở</h2>
+    <div id="adminRoomsBody"></div>
   </div>
 
   <!-- SCREEN: ROOM / GAME -->
@@ -315,13 +362,22 @@ try{
 
 function keyify(nick){ return nick.replace(/[.#$\[\]\/\s]/g,"_"); }
 
+async function sha256Hex(text){
+  const enc = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
 /* ===================== STATE ===================== */
-let myNick = localStorage.getItem("gh_nick") || "";
+let myNick = "";
+let myPassHash = "";
 let myElo = 1200;
+let myIsAdmin = false;
 let myRole = null; // 'p1' | 'p2'
 let currentRoomId = null;
 let roomUnsub = null;
 let roomState = null;
+let allRoomsUnsub = null;
 let chessGame = null; // chess.js instance mirror for local validation
 let threeCtx = null; // holds renderer/scene per active 3D game, disposed on leave
 
@@ -330,53 +386,80 @@ const $ = (id)=>document.getElementById(id);
 const screenNick = $("screen-nick");
 const screenLobby = $("screen-lobby");
 const screenLeaderboard = $("screen-leaderboard");
+const screenRoomList = $("screen-roomlist");
+const screenAdmin = $("screen-admin");
 const screenRoom = $("screen-room");
 
-/* ===================== NICKNAME ===================== */
+/* ===================== LOGIN / REGISTER ===================== */
 $("btnSaveNick").onclick = async ()=>{
   const val = $("nickInput").value.trim();
+  const pass = $("passInput").value;
   if(val.length < 2){ $("nickErr").textContent = "Biệt danh cần ít nhất 2 ký tự."; return; }
   if(!/^[a-zA-Z0-9À-ỹ _-]{2,16}$/.test(val)){ $("nickErr").textContent = "Chỉ dùng chữ, số, khoảng trắng, - hoặc _."; return; }
-  myNick = val;
+  if(pass.length < 4){ $("nickErr").textContent = "Mật khẩu cần ít nhất 4 ký tự."; return; }
+  if(!dbReady){ $("nickErr").textContent = "Chưa kết nối được máy chủ."; return; }
+
+  const k = keyify(val);
+  const hash = await sha256Hex(pass);
+  const snap = await get(ref(db, "users/"+k));
+
+  if(snap.exists()){
+    const u = snap.val();
+    if(u.banned){ $("nickErr").textContent = "Tài khoản này đã bị cấm."; return; }
+    if(u.passwordHash !== hash){ $("nickErr").textContent = "Sai mật khẩu."; return; }
+    myNick = val; myPassHash = hash; myElo = u.elo; myIsAdmin = !!u.isAdmin;
+  } else {
+    const newUser = { nick: val, passwordHash: hash, elo: 1200, wins:0, losses:0, draws:0, isAdmin:false, banned:false };
+    await set(ref(db, "users/"+k), newUser);
+    myNick = val; myPassHash = hash; myElo = 1200; myIsAdmin = false;
+  }
   localStorage.setItem("gh_nick", myNick);
-  await ensureLeaderboardEntry();
+  localStorage.setItem("gh_pass", myPassHash);
+  $("nickErr").textContent = "";
   goLobby();
 };
 $("btnChangeNick").onclick = ()=>{
+  localStorage.removeItem("gh_nick");
+  localStorage.removeItem("gh_pass");
+  myNick = ""; myPassHash = ""; myIsAdmin = false;
   showOnly(screenNick);
-  $("nickInput").value = myNick;
+  $("nickInput").value = "";
+  $("passInput").value = "";
 };
 
-async function ensureLeaderboardEntry(){
-  if(!dbReady) return;
-  const k = keyify(myNick);
-  const snap = await get(ref(db, "leaderboard/"+k));
-  if(!snap.exists()){
-    await set(ref(db, "leaderboard/"+k), { nick: myNick, elo: 1200, wins:0, losses:0, draws:0 });
-    myElo = 1200;
-  } else {
-    myElo = snap.val().elo;
-  }
+async function tryAutoLogin(){
+  const savedNick = localStorage.getItem("gh_nick");
+  const savedHash = localStorage.getItem("gh_pass");
+  if(!savedNick || !savedHash || !dbReady) return false;
+  const k = keyify(savedNick);
+  const snap = await get(ref(db, "users/"+k));
+  if(!snap.exists()) return false;
+  const u = snap.val();
+  if(u.banned || u.passwordHash !== savedHash) return false;
+  myNick = savedNick; myPassHash = savedHash; myElo = u.elo; myIsAdmin = !!u.isAdmin;
+  return true;
 }
 
 /* ===================== SCREEN HELPERS ===================== */
 function showOnly(...panels){
-  [screenNick, screenLobby, screenLeaderboard, screenRoom].forEach(p=>p.classList.add("hidden"));
+  [screenNick, screenLobby, screenLeaderboard, screenRoomList, screenAdmin, screenRoom].forEach(p=>p.classList.add("hidden"));
   panels.forEach(p=>p.classList.remove("hidden"));
 }
 
 async function goLobby(){
   $("lobbyNick").textContent = myNick;
   $("lobbyElo").textContent = "ELO " + myElo;
-  showOnly(screenLobby, screenLeaderboard);
+  $("btnAdminPanel").classList.toggle("hidden", !myIsAdmin);
+  showOnly(screenLobby, screenRoomList, screenLeaderboard);
   loadLeaderboard();
+  loadRoomList();
 }
 
 function loadLeaderboard(){
   if(!dbReady) return;
-  onValue(ref(db, "leaderboard"), (snap)=>{
+  onValue(ref(db, "users"), (snap)=>{
     const data = snap.val() || {};
-    const arr = Object.values(data).sort((a,b)=>b.elo-a.elo).slice(0,10);
+    const arr = Object.values(data).filter(p=>!p.banned).sort((a,b)=>b.elo-a.elo).slice(0,10);
     const tbl = $("lbTable");
     if(arr.length===0){ tbl.innerHTML = "<tr><td>Chưa có ai chơi.</td></tr>"; return; }
     let html = "<tr><th>#</th><th>Tên</th><th>ELO</th><th>T/H/B</th></tr>";
@@ -388,6 +471,132 @@ function loadLeaderboard(){
 }
 function escapeHtml(s){ return s.replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
+/* ===================== LIVE ROOM LIST ===================== */
+function loadRoomList(){
+  if(!dbReady) return;
+  if(allRoomsUnsub) allRoomsUnsub();
+  allRoomsUnsub = onValue(ref(db, "rooms"), (snap)=>{
+    if(!screenRoomList.classList.contains("hidden") || !screenLobby.classList.contains("hidden") || !screenAdmin.classList.contains("hidden")){
+      renderRoomList(snap.val() || {});
+      renderAdminRooms(snap.val() || {});
+    }
+  });
+}
+
+function renderRoomList(rooms){
+  const body = $("roomListBody");
+  const entries = Object.entries(rooms).filter(([id,r])=> r.status !== 'finished' || (r.p1 && r.p2));
+  if(entries.length===0){ body.innerHTML = "<p class='sub'>Chưa có phòng nào, tạo phòng mới ở trên nhé.</p>"; return; }
+  body.innerHTML = "";
+  entries.forEach(([id,r])=>{
+    const count = (r.p1?1:0) + (r.p2?1:0);
+    const row = document.createElement("div");
+    row.className = "list-row";
+    row.innerHTML = `
+      <div class="info">
+        <span class="t1">${escapeHtml(r.roomName || id)} ${r.hasPassword ? '🔒' : ''}</span>
+        <span class="t2">Chủ phòng: ${r.p1 ? escapeHtml(r.p1.nick) : '—'} · ${count}/2 người · ${r.game || 'chưa chọn trò'}</span>
+      </div>
+      <div class="acts"><button data-id="${id}">Vào</button></div>
+    `;
+    row.querySelector("button").onclick = ()=> attemptJoinById(id, r);
+    body.appendChild(row);
+  });
+}
+
+async function attemptJoinById(id, r){
+  if(r.hasPassword){
+    const pw = prompt("Phòng này có mật khẩu, nhập vào:");
+    if(pw===null) return;
+    const hash = await sha256Hex(pw);
+    if(hash !== r.passwordHash){ alert("Sai mật khẩu."); return; }
+  }
+  await joinRoomById(id);
+}
+
+/* ===================== ADMIN PANEL ===================== */
+$("btnAdminPanel").onclick = ()=>{
+  showOnly(screenAdmin);
+  loadAdminUsers();
+};
+$("btnCloseAdmin").onclick = ()=> goLobby();
+
+function loadAdminUsers(){
+  if(!dbReady) return;
+  onValue(ref(db,"users"), (snap)=>{
+    if(screenAdmin.classList.contains("hidden")) return;
+    renderAdminUsers(snap.val() || {});
+  });
+}
+
+function renderAdminUsers(users){
+  const body = $("adminUsersBody");
+  const entries = Object.entries(users).sort((a,b)=> (b[1].elo||0)-(a[1].elo||0));
+  if(entries.length===0){ body.innerHTML = "<p class='sub'>Chưa có ai.</p>"; return; }
+  body.innerHTML = "";
+  entries.forEach(([k,u])=>{
+    const row = document.createElement("div");
+    row.className = "list-row";
+    row.innerHTML = `
+      <div class="info">
+        <span class="t1">${escapeHtml(u.nick)} ${u.isAdmin?'⭐':''} ${u.banned?'<span class="banned-tag">ĐÃ CẤM</span>':''}</span>
+        <span class="t2">T/H/B: ${u.wins||0}/${u.losses||0}/${u.draws||0}</span>
+      </div>
+      <div class="acts">
+        <input type="text" class="mini-input" value="${u.elo}" data-key="${k}">
+        <button data-act="save" data-key="${k}">Lưu</button>
+        <button data-act="ban" data-key="${k}" class="${u.banned?'':'danger'}">${u.banned?'Bỏ cấm':'Cấm'}</button>
+      </div>
+    `;
+    row.querySelector('[data-act="save"]').onclick = async ()=>{
+      const input = row.querySelector(".mini-input");
+      const newElo = parseInt(input.value,10);
+      if(isNaN(newElo)) { alert("ELO không hợp lệ."); return; }
+      await update(ref(db,"users/"+k), { elo: newElo });
+    };
+    row.querySelector('[data-act="ban"]').onclick = async ()=>{
+      await update(ref(db,"users/"+k), { banned: !u.banned });
+    };
+    body.appendChild(row);
+  });
+}
+
+function renderAdminRooms(rooms){
+  const body = $("adminRoomsBody");
+  if(!body) return;
+  const entries = Object.entries(rooms);
+  if(entries.length===0){ body.innerHTML = "<p class='sub'>Chưa có phòng nào.</p>"; return; }
+  body.innerHTML = "";
+  entries.forEach(([id,r])=>{
+    const count = (r.p1?1:0) + (r.p2?1:0);
+    const row = document.createElement("div");
+    row.className = "list-row";
+    row.innerHTML = `
+      <div class="info">
+        <span class="t1">${escapeHtml(r.roomName || id)} ${r.hasPassword ? '🔒' : ''}</span>
+        <span class="t2">${r.p1?escapeHtml(r.p1.nick):'—'} vs ${r.p2?escapeHtml(r.p2.nick):'—'} · ${r.game||'chưa chọn'} · ${count}/2</span>
+      </div>
+      <div class="acts">
+        <button data-act="view">Xem</button>
+        <button data-act="close" class="danger">Đóng</button>
+      </div>
+    `;
+    row.querySelector('[data-act="view"]').onclick = ()=> adminSpectateRoom(id);
+    row.querySelector('[data-act="close"]').onclick = async ()=>{
+      if(confirm("Đóng phòng này?")) await remove(ref(db,"rooms/"+id));
+    };
+    body.appendChild(row);
+  });
+}
+
+async function adminSpectateRoom(id){
+  const snap = await get(ref(db,"rooms/"+id));
+  if(!snap.exists()){ alert("Phòng không còn tồn tại."); return; }
+  const data = snap.val();
+  myRole = (data.p1 && data.p1.nick===myNick) ? 'p1' : (data.p2 && data.p2.nick===myNick) ? 'p2' : null;
+  enterRoom(id);
+}
+
 /* ===================== ROOM: CREATE / JOIN ===================== */
 function randomRoomId(){
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -398,9 +607,16 @@ function randomRoomId(){
 
 $("btnCreateRoom").onclick = async ()=>{
   if(!dbReady){ $("lobbyErr").textContent = "Chưa kết nối được máy chủ."; return; }
+  const roomName = $("roomNameInput").value.trim() || (myNick + "'s room");
+  const rawPass = $("roomPassInput").value;
+  const hasPassword = rawPass.length > 0;
+  const passwordHash = hasPassword ? await sha256Hex(rawPass) : null;
   const id = randomRoomId();
   await set(ref(db, "rooms/"+id), {
     createdAt: Date.now(),
+    roomName,
+    hasPassword,
+    passwordHash,
     p1: { nick: myNick },
     p2: null,
     game: null,
@@ -413,6 +629,7 @@ $("btnCreateRoom").onclick = async ()=>{
     rematch: { p1:false, p2:false }
   });
   myRole = "p1";
+  $("roomNameInput").value = ""; $("roomPassInput").value = "";
   enterRoom(id);
 };
 
@@ -420,20 +637,32 @@ $("btnJoinRoom").onclick = async ()=>{
   if(!dbReady){ $("lobbyErr").textContent = "Chưa kết nối được máy chủ."; return; }
   const id = $("joinRoomInput").value.trim().toUpperCase();
   if(!id){ $("lobbyErr").textContent = "Nhập mã phòng."; return; }
-  const roomRef = ref(db, "rooms/"+id);
-  const snap = await get(roomRef);
+  const snap = await get(ref(db, "rooms/"+id));
   if(!snap.exists()){ $("lobbyErr").textContent = "Không tìm thấy phòng này."; return; }
   const data = snap.val();
-  if(data.p2 && data.p2.nick && data.p2.nick !== myNick){
-    $("lobbyErr").textContent = "Phòng đã đủ người."; return;
+  if(data.hasPassword && !(data.p1 && data.p1.nick===myNick) && !(data.p2 && data.p2.nick===myNick)){
+    const pw = prompt("Phòng này có mật khẩu, nhập vào:");
+    if(pw===null) return;
+    const hash = await sha256Hex(pw);
+    if(hash !== data.passwordHash){ $("lobbyErr").textContent = "Sai mật khẩu."; return; }
   }
-  if(!data.p2){
+  $("lobbyErr").textContent = "";
+  await joinRoomById(id, data);
+};
+
+async function joinRoomById(id, preloadedData){
+  const roomRef = ref(db, "rooms/"+id);
+  const data = preloadedData || (await get(roomRef)).val();
+  if(!data){ alert("Không tìm thấy phòng này."); return; }
+  if(data.p2 && data.p2.nick && data.p2.nick !== myNick && !(data.p1 && data.p1.nick===myNick)){
+    alert("Phòng đã đủ người."); return;
+  }
+  if(!data.p2 && !(data.p1 && data.p1.nick===myNick)){
     await update(roomRef, { p2: { nick: myNick }, status: "picking" });
   }
   myRole = (data.p1 && data.p1.nick === myNick) ? "p1" : "p2";
-  $("lobbyErr").textContent = "";
   enterRoom(id);
-};
+}
 
 function enterRoom(id){
   currentRoomId = id;
@@ -543,7 +772,7 @@ async function applyEloUpdate(winnerRole){
   if(myRole !== 'p1') return;
   const p1nick = roomState.p1.nick, p2nick = roomState.p2.nick;
   const k1 = keyify(p1nick), k2 = keyify(p2nick);
-  const [s1, s2] = await Promise.all([get(ref(db,"leaderboard/"+k1)), get(ref(db,"leaderboard/"+k2))]);
+  const [s1, s2] = await Promise.all([get(ref(db,"users/"+k1)), get(ref(db,"users/"+k2))]);
   const d1 = s1.exists()? s1.val() : {nick:p1nick, elo:1200, wins:0, losses:0, draws:0};
   const d2 = s2.exists()? s2.val() : {nick:p2nick, elo:1200, wins:0, losses:0, draws:0};
   const K = 32;
@@ -556,8 +785,8 @@ async function applyEloUpdate(winnerRole){
   d1.elo = Math.round(d1.elo + K*(score1-exp1));
   d2.elo = Math.round(d2.elo + K*(score2-exp2));
   d1.nick = p1nick; d2.nick = p2nick;
-  await set(ref(db,"leaderboard/"+k1), d1);
-  await set(ref(db,"leaderboard/"+k2), d2);
+  await set(ref(db,"users/"+k1), d1);
+  await set(ref(db,"users/"+k2), d2);
   if(p1nick===myNick) myElo = d1.elo;
   if(p2nick===myNick) myElo = d2.elo;
 }
@@ -916,10 +1145,12 @@ async function chessSquareClicked(sq){
 
 /* ===================== BOOT ===================== */
 (async function boot(){
-  if(myNick){
-    await ensureLeaderboardEntry();
+  const ok = await tryAutoLogin();
+  if(ok){
     goLobby();
   } else {
+    localStorage.removeItem("gh_nick");
+    localStorage.removeItem("gh_pass");
     showOnly(screenNick);
   }
 })();
