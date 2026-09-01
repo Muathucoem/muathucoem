@@ -129,7 +129,7 @@
     padding:6px;border-radius:8px;
     border:1px solid rgba(201,161,90,.35);
     perspective:900px;
-    touch-action:manipulation;
+    touch-action:none;
   }
   .caro-cell{
     width:26px;height:26px;background:#e8dcc0;border-radius:2px;
@@ -169,6 +169,7 @@
     display:grid;grid-template-columns:repeat(8,1fr);
     width:100%;max-width:460px;aspect-ratio:1/1;
     border-radius:4px;overflow:hidden;border:1px solid rgba(0,0,0,.4);
+    touch-action:none;
   }
   .chess-cell{
     display:flex;align-items:center;justify-content:center;
@@ -1226,19 +1227,27 @@ function pieceImgUrl(type, color){
 }
 
 /* --- admin-only engine hint (Stockfish, loaded lazily as a Web Worker) --- */
+function withTimeout(promise, ms, label){
+  return Promise.race([
+    promise,
+    new Promise((_, reject)=> setTimeout(()=> reject(new Error((label||"timeout")+" quá thời gian chờ")), ms))
+  ]);
+}
+
 async function loadStockfish(){
   if(sfWorker) return sfWorker;
   const resp = await fetch("https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js");
   const code = await resp.text();
   const blob = new Blob([code], {type:"application/javascript"});
-  sfWorker = new Worker(URL.createObjectURL(blob));
-  await new Promise(resolveReady=>{
+  const worker = new Worker(URL.createObjectURL(blob));
+  await withTimeout(new Promise(resolveReady=>{
     function onMsg(e){
-      if(e.data === "uciok"){ sfWorker.removeEventListener("message", onMsg); resolveReady(); }
+      if(e.data === "uciok"){ worker.removeEventListener("message", onMsg); resolveReady(); }
     }
-    sfWorker.addEventListener("message", onMsg);
-    sfWorker.postMessage("uci");
-  });
+    worker.addEventListener("message", onMsg);
+    worker.postMessage("uci");
+  }), 8000, "Tải engine");
+  sfWorker = worker;
   return sfWorker;
 }
 
@@ -1251,7 +1260,7 @@ $("btnHint").onclick = async ()=>{
   try{
     const worker = await loadStockfish();
     const fen = chessGame.fen();
-    const bestMove = await new Promise(resolve=>{
+    const bestMove = await withTimeout(new Promise(resolve=>{
       function onMsg(e){
         if(typeof e.data === "string" && e.data.startsWith("bestmove")){
           worker.removeEventListener("message", onMsg);
@@ -1260,15 +1269,17 @@ $("btnHint").onclick = async ()=>{
       }
       worker.addEventListener("message", onMsg);
       worker.postMessage("position fen " + fen);
-      worker.postMessage("go depth 16");
-    });
+      worker.postMessage("go movetime 2500"); // bounded to ~2.5s so it can't hang or bog down the phone
+    }), 9000, "Tính nước đi");
     if(bestMove && bestMove !== "(none)"){
       chessHint = { fen, from: bestMove.slice(0,2), to: bestMove.slice(2,4) };
       renderChess();
     }
   } catch(err){
     console.error("Stockfish error", err);
-    alert("Không tải được engine — kiểm tra kết nối mạng.");
+    // engine may be wedged after a timeout — drop it so the next click starts fresh
+    if(sfWorker){ try{ sfWorker.terminate(); }catch(_){} sfWorker = null; }
+    alert("Không lấy được gợi ý (mạng chậm hoặc engine treo) — thử bấm lại.");
   } finally {
     btn.disabled = false;
     btn.textContent = oldText;
