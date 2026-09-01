@@ -54,13 +54,13 @@
   .sub{color:var(--ivory-dim);font-size:.85rem;margin:0 0 18px;}
 
   label{display:block;font-size:.8rem;color:var(--ivory-dim);margin-bottom:6px;}
-  input[type=text]{
+  input[type=text], input[type=password], input[type=number]{
     width:100%;padding:11px 12px;border-radius:8px;border:1px solid rgba(201,161,90,.4);
     background:rgba(0,0,0,.25);color:var(--ivory);font-family:var(--serif);font-size:1rem;
     outline:none;
   }
-  input[type=text]:focus{border-color:var(--gold);}
-  input[type=text]::placeholder{color:rgba(242,233,216,.35)}
+  input[type=text]:focus, input[type=password]:focus, input[type=number]:focus{border-color:var(--gold);}
+  input[type=text]::placeholder, input[type=password]::placeholder{color:rgba(242,233,216,.35)}
 
   .row{display:flex;gap:10px;margin-top:14px;}
   .row > *{flex:1;}
@@ -245,16 +245,40 @@
   <!-- SCREEN: LOGIN -->
   <div id="screen-nick" class="panel">
     <h2>Đăng nhập</h2>
-    <p class="sub">Nhập biệt danh và mật khẩu. Nếu tên chưa tồn tại, tài khoản mới sẽ được tạo tự động.</p>
+    <p class="sub">Nhập biệt danh và mật khẩu của bạn.</p>
     <label for="nickInput">Biệt danh</label>
     <input type="text" id="nickInput" maxlength="16" placeholder="Vd: HoangDeCo">
     <div style="height:10px;"></div>
     <label for="passInput">Mật khẩu</label>
-    <input type="password" id="passInput" maxlength="40" placeholder="Ít nhất 4 ký tự">
+    <input type="password" id="passInput" maxlength="40" placeholder="Mật khẩu">
     <div class="row">
-      <button id="btnSaveNick">Đăng nhập / Đăng ký</button>
+      <button id="btnSaveNick">Đăng nhập</button>
     </div>
     <div class="err" id="nickErr"></div>
+    <p class="sub" style="margin-top:16px;text-align:center;">
+      Chưa có tài khoản? <a href="#" id="linkGoRegister" style="color:var(--gold-bright);font-weight:700;">Đăng ký ngay</a>
+    </p>
+  </div>
+
+  <!-- SCREEN: REGISTER -->
+  <div id="screen-register" class="panel hidden">
+    <h2>Tạo tài khoản mới</h2>
+    <p class="sub">Chọn biệt danh và mật khẩu. Biệt danh sẽ hiện với đối thủ và trên bảng xếp hạng.</p>
+    <label for="regNickInput">Biệt danh</label>
+    <input type="text" id="regNickInput" maxlength="16" placeholder="Vd: HoangDeCo">
+    <div style="height:10px;"></div>
+    <label for="regPassInput">Mật khẩu</label>
+    <input type="password" id="regPassInput" maxlength="40" placeholder="Ít nhất 4 ký tự">
+    <div style="height:10px;"></div>
+    <label for="regPassInput2">Nhập lại mật khẩu</label>
+    <input type="password" id="regPassInput2" maxlength="40" placeholder="Nhập lại mật khẩu">
+    <div class="row">
+      <button id="btnRegister">Đăng ký</button>
+    </div>
+    <div class="err" id="regErr"></div>
+    <p class="sub" style="margin-top:16px;text-align:center;">
+      Đã có tài khoản? <a href="#" id="linkGoLogin" style="color:var(--gold-bright);font-weight:700;">Đăng nhập</a>
+    </p>
   </div>
 
   <!-- SCREEN: LOBBY -->
@@ -442,40 +466,82 @@ let threeCtx = null; // holds renderer/scene per active 3D game, disposed on lea
 /* ===================== DOM ===================== */
 const $ = (id)=>document.getElementById(id);
 const screenNick = $("screen-nick");
+const screenRegister = $("screen-register");
 const screenLobby = $("screen-lobby");
 const screenLeaderboard = $("screen-leaderboard");
 const screenRoomList = $("screen-roomlist");
 const screenAdmin = $("screen-admin");
 const screenRoom = $("screen-room");
 
-/* ===================== LOGIN / REGISTER ===================== */
+/* ===================== LOGIN ===================== */
 $("btnSaveNick").onclick = async ()=>{
   const val = $("nickInput").value.trim();
   const pass = $("passInput").value;
-  if(val.length < 2){ $("nickErr").textContent = "Biệt danh cần ít nhất 2 ký tự."; return; }
-  if(!/^[a-zA-Z0-9À-ỹ _-]{2,16}$/.test(val)){ $("nickErr").textContent = "Chỉ dùng chữ, số, khoảng trắng, - hoặc _."; return; }
-  if(pass.length < 4){ $("nickErr").textContent = "Mật khẩu cần ít nhất 4 ký tự."; return; }
+  if(!val || !pass){ $("nickErr").textContent = "Nhập đủ biệt danh và mật khẩu."; return; }
   if(!dbReady){ $("nickErr").textContent = "Chưa kết nối được máy chủ."; return; }
 
   const k = keyify(val);
   const hash = await sha256Hex(pass);
   const snap = await get(ref(db, "users/"+k));
 
-  if(snap.exists()){
-    const u = snap.val();
-    if(u.banned){ $("nickErr").textContent = "Tài khoản này đã bị cấm."; return; }
-    if(u.passwordHash !== hash){ $("nickErr").textContent = "Sai mật khẩu."; return; }
-    myNick = val; myPassHash = hash; myElo = u.elo; myIsAdmin = !!u.isAdmin;
-  } else {
-    const newUser = { nick: val, passwordHash: hash, elo: 1200, wins:0, losses:0, draws:0, isAdmin:false, banned:false };
-    await set(ref(db, "users/"+k), newUser);
-    myNick = val; myPassHash = hash; myElo = 1200; myIsAdmin = false;
+  if(!snap.exists()){
+    $("nickErr").innerHTML = 'Tài khoản chưa tồn tại. Bấm "Đăng ký ngay" bên dưới để tạo mới.';
+    return;
   }
+  const u = snap.val();
+  if(u.banned){ $("nickErr").textContent = "Tài khoản này đã bị cấm."; return; }
+  if(u.passwordHash !== hash){ $("nickErr").textContent = "Sai mật khẩu."; return; }
+
+  myNick = val; myPassHash = hash; myElo = u.elo; myIsAdmin = !!u.isAdmin;
   localStorage.setItem("gh_nick", myNick);
   localStorage.setItem("gh_pass", myPassHash);
   $("nickErr").textContent = "";
   goLobby();
 };
+
+$("linkGoRegister").onclick = (e)=>{
+  e.preventDefault();
+  $("regErr").textContent = "";
+  $("regNickInput").value = $("nickInput").value;
+  $("regPassInput").value = ""; $("regPassInput2").value = "";
+  showOnly(screenRegister);
+};
+
+/* ===================== REGISTER ===================== */
+$("btnRegister").onclick = async ()=>{
+  const val = $("regNickInput").value.trim();
+  const pass = $("regPassInput").value;
+  const pass2 = $("regPassInput2").value;
+  if(val.length < 2){ $("regErr").textContent = "Biệt danh cần ít nhất 2 ký tự."; return; }
+  if(!/^[a-zA-Z0-9À-ỹ _-]{2,16}$/.test(val)){ $("regErr").textContent = "Chỉ dùng chữ, số, khoảng trắng, - hoặc _."; return; }
+  if(pass.length < 4){ $("regErr").textContent = "Mật khẩu cần ít nhất 4 ký tự."; return; }
+  if(pass !== pass2){ $("regErr").textContent = "Mật khẩu nhập lại không khớp."; return; }
+  if(!dbReady){ $("regErr").textContent = "Chưa kết nối được máy chủ."; return; }
+
+  const k = keyify(val);
+  const snap = await get(ref(db, "users/"+k));
+  if(snap.exists()){
+    $("regErr").innerHTML = 'Tên này đã có người dùng. Hãy chọn tên khác hoặc "Đăng nhập" bên dưới.';
+    return;
+  }
+  const hash = await sha256Hex(pass);
+  const newUser = { nick: val, passwordHash: hash, elo: 1200, wins:0, losses:0, draws:0, isAdmin:false, banned:false };
+  await set(ref(db, "users/"+k), newUser);
+  myNick = val; myPassHash = hash; myElo = 1200; myIsAdmin = false;
+  localStorage.setItem("gh_nick", myNick);
+  localStorage.setItem("gh_pass", myPassHash);
+  $("regErr").textContent = "";
+  goLobby();
+};
+
+$("linkGoLogin").onclick = (e)=>{
+  e.preventDefault();
+  $("nickErr").textContent = "";
+  $("nickInput").value = $("regNickInput").value;
+  $("passInput").value = "";
+  showOnly(screenNick);
+};
+
 $("btnChangeNick").onclick = ()=>{
   localStorage.removeItem("gh_nick");
   localStorage.removeItem("gh_pass");
@@ -483,6 +549,7 @@ $("btnChangeNick").onclick = ()=>{
   showOnly(screenNick);
   $("nickInput").value = "";
   $("passInput").value = "";
+  $("nickErr").textContent = "";
 };
 
 async function tryAutoLogin(){
@@ -500,7 +567,7 @@ async function tryAutoLogin(){
 
 /* ===================== SCREEN HELPERS ===================== */
 function showOnly(...panels){
-  [screenNick, screenLobby, screenLeaderboard, screenRoomList, screenAdmin, screenRoom].forEach(p=>p.classList.add("hidden"));
+  [screenNick, screenRegister, screenLobby, screenLeaderboard, screenRoomList, screenAdmin, screenRoom].forEach(p=>p.classList.add("hidden"));
   panels.forEach(p=>p.classList.remove("hidden"));
 }
 
