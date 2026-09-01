@@ -228,7 +228,8 @@
   .list-row .info .t2{font-size:.75rem;color:var(--ivory-dim);}
   .list-row .acts{display:flex;gap:6px;}
   .list-row .acts button{padding:6px 10px;font-size:.75rem;}
-  .mini-input{width:70px;padding:6px 8px;font-size:.85rem;border-radius:6px;border:1px solid rgba(201,161,90,.4);background:rgba(0,0,0,.25);color:var(--ivory);}
+  .mini-input{width:78px;padding:7px 8px;font-size:.95rem;font-weight:700;border-radius:6px;border:1.5px solid rgba(201,161,90,.6);background:#16100a;color:#ffffff;text-align:center;}
+  .mini-input:focus{outline:none;border-color:var(--gold-bright);}
   .banned-tag{color:#e28a7a;font-size:.72rem;font-weight:700;}
 </style>
 </head>
@@ -596,17 +597,18 @@ function renderAdminUsers(users){
     row.innerHTML = `
       <div class="info">
         <span class="t1">${escapeHtml(u.nick)} ${u.isAdmin?'⭐':''} ${u.banned?'<span class="banned-tag">ĐÃ CẤM</span>':''}</span>
-        <span class="t2">T/H/B: ${u.wins||0}/${u.losses||0}/${u.draws||0}</span>
+        <span class="t2">ELO ${u.elo ?? 1200} · T/H/B: ${u.wins||0}/${u.losses||0}/${u.draws||0}</span>
       </div>
       <div class="acts">
-        <input type="text" class="mini-input" value="${u.elo}" data-key="${k}">
+        <input type="number" inputmode="numeric" class="mini-input" value="${u.elo ?? 1200}" data-key="${k}">
         <button data-act="save" data-key="${k}">Lưu</button>
         <button data-act="ban" data-key="${k}" class="${u.banned?'':'danger'}">${u.banned?'Bỏ cấm':'Cấm'}</button>
       </div>
     `;
+    const eloInput = row.querySelector(".mini-input");
+    eloInput.addEventListener("focus", ()=> eloInput.select());
     row.querySelector('[data-act="save"]').onclick = async ()=>{
-      const input = row.querySelector(".mini-input");
-      const newElo = parseInt(input.value,10);
+      const newElo = parseInt(eloInput.value,10);
       if(isNaN(newElo)) { alert("ELO không hợp lệ."); return; }
       await update(ref(db,"users/"+k), { elo: newElo });
     };
