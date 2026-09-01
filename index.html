@@ -182,6 +182,7 @@
   .chess-cell.hint-move{box-shadow:inset 0 0 0 4px #3a9bd9;}
   .piece-w{color:#ffffff;text-shadow:0 1px 1px rgba(0,0,0,.55), 0 0 3px rgba(0,0,0,.35);}
   .piece-b{color:#1a120c;text-shadow:0 1px 1px rgba(255,255,255,.35);}
+  .piece-img{width:82%;height:82%;pointer-events:none;user-select:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45));}
   .coord-label{position:absolute;font-size:9px;font-weight:800;opacity:.8;pointer-events:none;}
   .coord-file{right:3px;bottom:1px;}
   .coord-rank{left:3px;top:1px;}
@@ -220,15 +221,15 @@
   footer{margin-top:40px;color:rgba(242,233,216,.3);font-size:.75rem;text-align:center;}
 
   .list-row{
-    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
     background:rgba(0,0,0,.2);border-radius:8px;padding:10px 12px;margin-bottom:8px;
   }
-  .list-row .info{display:flex;flex-direction:column;gap:2px;}
+  .list-row .info{display:flex;flex-direction:column;gap:2px;flex:1 1 130px;min-width:0;}
   .list-row .info .t1{font-weight:700;color:var(--ivory);}
   .list-row .info .t2{font-size:.75rem;color:var(--ivory-dim);}
-  .list-row .acts{display:flex;gap:6px;}
-  .list-row .acts button{padding:6px 10px;font-size:.75rem;}
-  .mini-input{width:78px;padding:7px 8px;font-size:.95rem;font-weight:700;border-radius:6px;border:1.5px solid rgba(201,161,90,.6);background:#16100a;color:#ffffff;text-align:center;}
+  .list-row .acts{display:flex;gap:6px;align-items:center;flex-wrap:nowrap;flex:0 0 auto;margin-left:auto;}
+  .list-row .acts button{padding:8px 12px;font-size:.75rem;min-width:64px;white-space:nowrap;line-height:1.1;}
+  .mini-input{width:64px;height:36px;padding:0 6px;font-size:.9rem;font-weight:700;border-radius:6px;border:1.5px solid rgba(201,161,90,.6);background:#16100a;color:#ffffff;text-align:center;box-sizing:border-box;}
   .mini-input:focus{outline:none;border-color:var(--gold-bright);}
   .banned-tag{color:#e28a7a;font-size:.72rem;font-weight:700;}
 </style>
@@ -1152,10 +1153,10 @@ async function connect4Move(col){
    CHESS — chess.js rules, 2D board (clear black/white pieces)
 =================================================================== */
 let chessSelected = null;
-const CHESS_UNICODE = {
-  p:{w:'♙',b:'♟'}, r:{w:'♖',b:'♜'}, n:{w:'♘',b:'♞'},
-  b:{w:'♗',b:'♝'}, q:{w:'♕',b:'♛'}, k:{w:'♔',b:'♚'}
-};
+function pieceImgUrl(type, color){
+  const c = color==='w' ? 'l' : 'd';
+  return `https://commons.wikimedia.org/wiki/Special:FilePath/Chess_${type}${c}t45.svg`;
+}
 
 /* --- admin-only engine hint (Stockfish, loaded lazily as a Web Worker) --- */
 async function loadStockfish(){
@@ -1249,8 +1250,12 @@ function renderChess(){
       }
       const piece = chessGame.get(sq);
       if(piece){
-        cell.textContent = CHESS_UNICODE[piece.type][piece.color];
-        cell.classList.add(piece.color==='w' ? 'piece-w':'piece-b');
+        const img = document.createElement("img");
+        img.src = pieceImgUrl(piece.type, piece.color);
+        img.alt = piece.type;
+        img.className = "piece-img";
+        img.draggable = false;
+        cell.appendChild(img);
       }
       if(chessSelected===sq) cell.classList.add("selected");
       if(sq in legalTargets) cell.classList.add(legalTargets[sq] ? "legal-capture":"legal");
